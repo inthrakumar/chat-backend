@@ -2,6 +2,6 @@ import { Module } from '@nestjs/common';
 import { CassandraService } from './cassandra.service';
 
 @Module({
-  providers: [CassandraService]
+  providers: [CassandraService],
 })
 export class CassandraModule {}

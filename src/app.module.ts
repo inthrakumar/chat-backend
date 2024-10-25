@@ -7,6 +7,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/configuration';
 import { Neo4jScheme } from './neo4j-config/neo4j-config.interface';
 
+import { UsersModule } from './users/users.module';
+import { AuthController } from './auth/auth.controller';
+import { AuthService } from './auth/auth.service';
+import { AuthModule } from './auth/auth.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -25,8 +30,12 @@ import { Neo4jScheme } from './neo4j-config/neo4j-config.interface';
       inject: [ConfigService],
     }),
     CassandraModule,
+
+    UsersModule,
+
+    AuthModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, AuthController],
+  providers: [AppService, AuthService],
 })
 export class AppModule {}
