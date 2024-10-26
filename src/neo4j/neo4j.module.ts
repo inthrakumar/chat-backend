@@ -1,11 +1,11 @@
 // src/neo4j/neo4j.module.ts
-import { DynamicModule, Module } from '@nestjs/common';
+import { DynamicModule, Global, Module } from '@nestjs/common';
 import { Neo4jService } from './neo4j.service';
 import { Neo4jConfig } from 'src/neo4j-config/neo4j-config.interface';
 import { Neo4J_CONFIG, Neo4J_DRIVER } from './neo4j.data';
 import { createDriver } from './neo4j.utils';
 import { ConfigService } from '@nestjs/config';
-
+@Global()
 @Module({})
 export class Neo4jModule {
   static forRootAsync(options: {

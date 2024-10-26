@@ -24,6 +24,7 @@ import { AuthModule } from './auth/auth.module';
         scheme: configService.get<string>('database.scheme') as Neo4jScheme,
         hostname: configService.get<string>('database.url'),
         port: configService.get<number>('database.port'),
+        database: configService.get<string>('database.db'),
         username: configService.get<string>('database.username'),
         password: configService.get<string>('database.password'),
       }),
