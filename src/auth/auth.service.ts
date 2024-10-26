@@ -1,5 +1,4 @@
 import { Injectable, ConflictException } from '@nestjs/common';
-import { UsersService } from 'src/users/users.service';
 import { Neo4jService } from 'src/neo4j/neo4j.service';
 import { AuthDTO } from './auth-dto/auth.dto';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,7 +12,6 @@ export class AuthService {
   private writeSession: Session;
 
   constructor(
-    private readonly usersService: UsersService,
     private readonly neo4jService: Neo4jService,
     private readonly configService: ConfigService,
   ) {
