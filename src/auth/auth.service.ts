@@ -116,8 +116,7 @@ export class AuthService {
     }
 
     const user = result.records[0].get('u').properties;
-    console.log(user);
-    console.log(user.rtHash);
+
     if (!user || !user.rtHash) {
       throw new UnauthorizedException('Invalid user');
     }

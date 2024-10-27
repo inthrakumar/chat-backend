@@ -18,3 +18,8 @@ export type LoginPayload = JwtPayload & {
   id: string;
   email: string;
 };
+export type CassaandraConnectionData = {
+  contactPoints: string;
+  keyspace: string;
+  localDataCenter: string;
+};
