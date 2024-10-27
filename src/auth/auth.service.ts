@@ -1,41 +1,42 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Neo4jService } from 'src/neo4j/neo4j.service';
-import { AuthDTO } from './auth-dto/auth.dto';
+import { AuthDTO, LoginDTO } from './auth-dto/auth.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
-import * as CryptoJS from 'crypto-js';
+import * as bcrypt from 'bcrypt';
 import { Session } from 'neo4j-driver';
-
+import { JwtService } from '@nestjs/jwt';
+import { Tokens } from 'src/types/auth.types';
 @Injectable()
 export class AuthService {
-  private readSession: Session;
-  private writeSession: Session;
+  private readonly readSession: Session;
+  private readonly writeSession: Session;
 
   constructor(
     private readonly neo4jService: Neo4jService,
     private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
   ) {
     this.readSession = this.neo4jService.getReadSession();
     this.writeSession = this.neo4jService.getWriteSession();
   }
 
-  async signUp(
-    userDetails: AuthDTO,
-  ): Promise<{ message: string; user: { username: string; email: string } }> {
+  /**
+   * Register a new user
+   */
+  async signUp(userDetails: AuthDTO): Promise<Tokens> {
     const uniqueId = uuidv4();
     const { username, password, email } = userDetails;
 
-    const encryptionKey = this.configService.get<string>('AES_ENCRYPTION_KEY');
-    const encryptedPassword = CryptoJS.AES.encrypt(
-      password,
-      encryptionKey,
-    ).toString();
-
     const userExistsQuery = `
-  MATCH (u:user)
-  WHERE u.username = $username OR u.email = $email
-  RETURN u
-`;
+      MATCH (u:User)
+      WHERE u.username = $username OR u.email = $email
+      RETURN u
+    `;
 
     const existingUser = await this.readSession.run(userExistsQuery, {
       username,
@@ -43,27 +44,94 @@ export class AuthService {
     });
 
     if (existingUser.records.length > 0) {
-      throw new ConflictException('Username already exists.');
+      throw new ConflictException('Username or email already exists.');
     }
 
-    const cypher = `
-      CREATE (u:user {id: $id, username: $username, email: $email, password: $password})
+    const salt = await bcrypt.genSalt(10);
+    const encryptedPassword = await bcrypt.hash(password, salt);
+    const tokens = await this.signTokens(uniqueId, email);
+    const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, salt);
+    console.log(`Refresh token hash: ${refreshTokenHash}  `);
+    const cypherQuery = `
+      CREATE (u:User {id: $id, username: $username, email: $email, password: $password, rtHash: $rtHash})
       RETURN u
     `;
 
-    await this.writeSession.run(cypher, {
+    await this.writeSession.run(cypherQuery, {
       id: uniqueId,
       username,
       email,
       password: encryptedPassword,
+      rtHash: refreshTokenHash,
     });
 
+    return tokens;
+  }
+
+  async userValidate(loginData: LoginDTO): Promise<{
+    id: string;
+    username: string;
+    email: string;
+  }> {
+    const { identifier, password } = loginData;
+    const userExistsQuery = `
+      MATCH (u:User)
+      WHERE u.username = $identifier OR u.email = $identifier
+      RETURN DISTINCT u
+      LIMIT 1
+    `;
+
+    const result = await this.readSession.run(userExistsQuery, {
+      identifier,
+    });
+
+    const user =
+      result.records.length > 0 ? result.records[0].get('u').properties : null;
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials.');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials.');
+    }
+
     return {
-      message: 'User created successfully.',
-      user: {
-        username,
-        email,
-      },
+      id: user.id,
+      username: user.username,
+      email: user.email,
     };
+  }
+
+  async login() {}
+
+  async logout() {}
+
+  async forgotPassword() {}
+
+  async resetPassword() {}
+
+  async signTokens(id: string, email: string): Promise<Tokens> {
+    const accessKey = this.configService.get<string>('JWT_SECRET');
+    const refreshKey = this.configService.get<string>('REFRESH_JWT_SECRET');
+    const accessTokenFn = this.jwtService.signAsync(
+      { id, email },
+      {
+        secret: accessKey,
+        expiresIn: '15m',
+      },
+    );
+    const refreshTokenFn = this.jwtService.signAsync(
+      { id, email },
+      {
+        secret: refreshKey,
+        expiresIn: '7d',
+      },
+    );
+    const [accessToken, refreshToken] = await Promise.all([
+      accessTokenFn,
+      refreshTokenFn,
+    ]);
+    return { accessToken, refreshToken };
   }
 }

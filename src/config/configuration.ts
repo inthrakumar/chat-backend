@@ -1,5 +1,6 @@
 export default () => ({
   JWT_SECRET: process.env.JWT_TOKEN_KEY,
+  REFRESH_JWT_SECRET: process.env.JWT_REFRESH_TOKEN_KEY,
   AES_ENCRYPTION_KEY: process.env.AES_ENCRYPTION_KEY,
   database: {
     scheme: process.env.DATABASE_SCHEME,

@@ -6,10 +6,13 @@ import {
   HttpStatus,
   Res,
   ConflictException,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthDTO } from './auth-dto/auth.dto';
 import { Response } from 'express';
+import { CurrentUser } from './decorators/currentuser.decorator';
+import { PassportLocalGuard } from './guards/passport.local.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -31,5 +34,16 @@ export class AuthController {
         .status(HttpStatus.INTERNAL_SERVER_ERROR)
         .json({ message: 'Internal Server Error' });
     }
+  }
+  @Post('/local/login')
+  @UseGuards(PassportLocalGuard)
+  async login(
+    @Res({ passthrough: true }) res: Response,
+    @CurrentUser() user: { id: string; username: string; email: string },
+  ) {
+    return res.status(HttpStatus.OK).json({
+      message: 'Login successful',
+      user,
+    });
   }
 }
