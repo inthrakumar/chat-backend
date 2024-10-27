@@ -12,8 +12,8 @@ import { AuthService } from './auth.service';
 import { AuthDTO } from './auth-dto/auth.dto';
 import { Response } from 'express';
 import { CurrentUser } from './decorators/currentuser.decorator';
-import { AuthGuard } from '@nestjs/passport';
 import { Tokens } from 'src/types/auth.types';
+import { LocalGuard } from './guards/local.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -37,7 +37,7 @@ export class AuthController {
     }
   }
   @Post('/local/login')
-  @UseGuards(AuthGuard('local'))
+  @UseGuards(LocalGuard)
   async login(
     @Res({ passthrough: true }) res: Response,
     @CurrentUser() user: Tokens,
