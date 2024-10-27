@@ -3,7 +3,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-local';
 import { AuthService } from '../auth.service';
 import { LoginDTO } from '../auth-dto/auth.dto';
-import { Tokens } from 'src/types/auth.types';
+import { LoginPayload } from 'src/utilities/types/auth.types';
 
 @Injectable()
 export class LocalStrategy extends PassportStrategy(Strategy) {
@@ -13,7 +13,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(identifier: string, password: string): Promise<Tokens> {
+  async validate(identifier: string, password: string): Promise<LoginPayload> {
     const loginData: LoginDTO = { identifier, password };
     return this.authservice.userValidate(loginData);
   }

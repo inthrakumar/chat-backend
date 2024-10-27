@@ -2,7 +2,6 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
-  ForbiddenException,
 } from '@nestjs/common';
 import { Neo4jService } from 'src/neo4j/neo4j.service';
 import { AuthDTO, LoginDTO } from './auth-dto/auth.dto';
@@ -11,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { Session } from 'neo4j-driver';
 import { JwtService } from '@nestjs/jwt';
-import { Tokens } from 'src/types/auth.types';
+import { LoginPayload, Tokens } from 'src/utilities/types/auth.types';
 @Injectable()
 export class AuthService {
   private readonly readSession: Session;
@@ -49,7 +48,6 @@ export class AuthService {
     const encryptedPassword = await bcrypt.hash(password, salt);
     const tokens = await this.signTokens(uniqueId, email);
     const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, salt);
-    console.log(`Refresh token hash: ${refreshTokenHash}  `);
     const cypherQuery = `
       CREATE (u:User {id: $id, username: $username, email: $email, password: $password, rtHash: $rtHash})
       RETURN u
@@ -66,7 +64,7 @@ export class AuthService {
     return tokens;
   }
 
-  async userValidate(loginData: LoginDTO): Promise<Tokens> {
+  async userValidate(loginData: LoginDTO): Promise<LoginPayload> {
     const { identifier, password } = loginData;
     const userExistsQuery = `
       MATCH (u:User)
@@ -82,7 +80,7 @@ export class AuthService {
     const user =
       result.records.length > 0 ? result.records[0].get('u').properties : null;
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials.');
+      throw new UnauthorizedException('User Not Found.');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -99,7 +97,12 @@ export class AuthService {
       id: user.id,
       rtHash: await bcrypt.hash(tokens.refreshToken, 10),
     });
-    return tokens;
+
+    return {
+      id: user.id,
+      email: user.email,
+      ...tokens,
+    };
   }
 
   async logout() {}
@@ -108,26 +111,44 @@ export class AuthService {
 
   async resetPassword() {}
 
-  async refresh(id: string, rt: string, email: string): Promise<Tokens> {
+  async refresh(
+    id: string,
+    email: string,
+    refreshToken: string,
+  ): Promise<Tokens> {
     const cypherQuery = `
-    match (u:User {id: $id}) return u`;
+      MATCH (u:User {id: $id}) RETURN u
+    `;
     const result = await this.readSession.run(cypherQuery, { id });
+
+    if (!(result.records.length > 0)) {
+      throw new UnauthorizedException('User Not Found.');
+    }
+
     const user = result.records[0].get('u').properties;
     if (!user || !user.rtHash) {
       throw new UnauthorizedException('Invalid user');
     }
-    const rtMatches = await bcrypt.compare(user.rtHash, rt);
-    if (!rtMatches) throw new ForbiddenException('Access Denied');
+
+    const rtMatches = await bcrypt.compare(refreshToken, user.rtHash);
+
+    if (!rtMatches) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
     const tokens = await this.signTokens(id, email);
+
     const cypherRtQuery = `
-  MATCH (u:User {id: $id})
-  SET u.rtHash = $rtHash
-  RETURN u
-`;
+      MATCH (u:User {email: $email})
+      SET u.rtHash = $rtHash
+      RETURN u
+    `;
+    const rtHash = await bcrypt.hash(tokens.refreshToken, 10);
     await this.writeSession.run(cypherRtQuery, {
-      id: user.id,
-      rtHash: await bcrypt.hash(tokens.refreshToken, 10),
+      email: user.email,
+      rtHash,
     });
+
     return tokens;
   }
 

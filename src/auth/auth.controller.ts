@@ -11,11 +11,15 @@ import {
 import { AuthService } from './auth.service';
 import { AuthDTO } from './auth-dto/auth.dto';
 import { Response } from 'express';
-import { CurrentUser } from '../decorators/currentuser.decorator';
-import { RefreshTokenProps, Tokens } from 'src/types/auth.types';
-import { LocalGuard } from '../guards/local.guard';
-import { Public } from '../decorators/public.decorator';
-import { RtGuard } from 'src/guards/rt.guard';
+import { CurrentUser } from '../utilities/decorators/currentuser.decorator';
+import {
+  JwtRTPayload,
+  LoginPayload,
+  Tokens,
+} from 'src/utilities/types/auth.types';
+import { LocalGuard } from '../utilities/guards/local.guard';
+import { Public } from '../utilities/decorators/public.decorator';
+import { RtGuard } from 'src/utilities/guards/rt.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -43,7 +47,7 @@ export class AuthController {
   @UseGuards(LocalGuard)
   async login(
     @Res({ passthrough: true }) res: Response,
-    @CurrentUser() user: Tokens,
+    @CurrentUser() user: LoginPayload,
   ) {
     return res.status(HttpStatus.OK).json({
       message: 'Login successful',
@@ -56,8 +60,8 @@ export class AuthController {
   @UseGuards(RtGuard)
   async refreshTokens(
     @Res({ passthrough: true }) res: Response,
-    @CurrentUser() user: RefreshTokenProps,
+    @CurrentUser() user: JwtRTPayload,
   ): Promise<Tokens> {
-    return this.authService.refresh(user.id, user.email, user.rt);
+    return this.authService.refresh(user.id, user.email, user.refreshToken);
   }
 }
