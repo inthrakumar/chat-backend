@@ -25,9 +25,6 @@ export class AuthService {
     this.writeSession = this.neo4jService.getWriteSession();
   }
 
-  /**
-   * Register a new user
-   */
   async signUp(userDetails: AuthDTO): Promise<Tokens> {
     const uniqueId = uuidv4();
     const { username, password, email } = userDetails;
@@ -68,11 +65,7 @@ export class AuthService {
     return tokens;
   }
 
-  async userValidate(loginData: LoginDTO): Promise<{
-    id: string;
-    username: string;
-    email: string;
-  }> {
+  async userValidate(loginData: LoginDTO): Promise<Tokens> {
     const { identifier, password } = loginData;
     const userExistsQuery = `
       MATCH (u:User)
@@ -95,12 +88,17 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials.');
     }
-
-    return {
+    const tokens = await this.signTokens(user.email, user.id);
+    const cypherQuery = `
+  MATCH (u:User {id: $id})
+  SET u.rtHash = $rtHash
+  RETURN u
+`;
+    await this.writeSession.run(cypherQuery, {
       id: user.id,
-      username: user.username,
-      email: user.email,
-    };
+      rtHash: await bcrypt.hash(tokens.refreshToken, 10),
+    });
+    return tokens;
   }
 
   async login() {}

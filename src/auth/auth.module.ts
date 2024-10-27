@@ -4,20 +4,18 @@ import { AuthService } from './auth.service';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
-import { AccessTokenStrategy } from './strategies/accesstoken.strategy';
-import { RefreshTokenStrategy } from './strategies/refereshtoken.strategy';
+import { AccessTokenStrategy } from './strategies/passport.accesstokenstrategy';
+import { RefreshTokenStrategy } from './strategies/passport.refreshtokenstrategy';
+import { LocalStrategy } from './strategies/passport.localstrategy';
 @Module({
-  imports: [
-    ConfigModule,
-    PassportModule.register({ defaultStrategy: 'local' }),
-    JwtModule.register({}),
-  ],
+  imports: [ConfigModule, PassportModule.register({}), JwtModule.register({})],
   controllers: [AuthController],
   providers: [
     AuthService,
     AccessTokenStrategy,
     RefreshTokenStrategy,
     JwtService,
+    LocalStrategy,
   ],
   exports: [PassportModule, JwtModule],
 })

@@ -12,7 +12,8 @@ import { AuthService } from './auth.service';
 import { AuthDTO } from './auth-dto/auth.dto';
 import { Response } from 'express';
 import { CurrentUser } from './decorators/currentuser.decorator';
-import { PassportLocalGuard } from './guards/passport.local.guard';
+import { AuthGuard } from '@nestjs/passport';
+import { Tokens } from 'src/types/auth.types';
 
 @Controller('auth')
 export class AuthController {
@@ -36,14 +37,14 @@ export class AuthController {
     }
   }
   @Post('/local/login')
-  @UseGuards(PassportLocalGuard)
+  @UseGuards(AuthGuard('local'))
   async login(
     @Res({ passthrough: true }) res: Response,
-    @CurrentUser() user: { id: string; username: string; email: string },
+    @CurrentUser() user: Tokens,
   ) {
     return res.status(HttpStatus.OK).json({
       message: 'Login successful',
-      user,
+      user: user,
     });
   }
 }
