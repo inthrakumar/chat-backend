@@ -11,14 +11,16 @@ import {
 import { AuthService } from './auth.service';
 import { AuthDTO } from './auth-dto/auth.dto';
 import { Response } from 'express';
-import { CurrentUser } from './decorators/currentuser.decorator';
-import { Tokens } from 'src/types/auth.types';
-import { LocalGuard } from './guards/local.guard';
+import { CurrentUser } from '../decorators/currentuser.decorator';
+import { RefreshTokenProps, Tokens } from 'src/types/auth.types';
+import { LocalGuard } from '../guards/local.guard';
+import { Public } from '../decorators/public.decorator';
+import { RtGuard } from 'src/guards/rt.guard';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
-
+  @Public()
   @Post('/local/signup')
   async signUp(
     @Body(ValidationPipe) userDetails: AuthDTO,
@@ -36,6 +38,7 @@ export class AuthController {
         .json({ message: 'Internal Server Error' });
     }
   }
+  @Public()
   @Post('/local/login')
   @UseGuards(LocalGuard)
   async login(
@@ -46,5 +49,15 @@ export class AuthController {
       message: 'Login successful',
       user: user,
     });
+  }
+
+  @Public()
+  @Post('/refresh')
+  @UseGuards(RtGuard)
+  async refreshTokens(
+    @Res({ passthrough: true }) res: Response,
+    @CurrentUser() user: RefreshTokenProps,
+  ): Promise<Tokens> {
+    return this.authService.refresh(user.id, user.email, user.rt);
   }
 }

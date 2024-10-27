@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { Neo4jService } from 'src/neo4j/neo4j.service';
 import { AuthDTO, LoginDTO } from './auth-dto/auth.dto';
@@ -101,13 +102,34 @@ export class AuthService {
     return tokens;
   }
 
-  async login() {}
-
   async logout() {}
 
   async forgotPassword() {}
 
   async resetPassword() {}
+
+  async refresh(id: string, rt: string, email: string): Promise<Tokens> {
+    const cypherQuery = `
+    match (u:User {id: $id}) return u`;
+    const result = await this.readSession.run(cypherQuery, { id });
+    const user = result.records[0].get('u').properties;
+    if (!user || !user.rtHash) {
+      throw new UnauthorizedException('Invalid user');
+    }
+    const rtMatches = await bcrypt.compare(user.rtHash, rt);
+    if (!rtMatches) throw new ForbiddenException('Access Denied');
+    const tokens = await this.signTokens(id, email);
+    const cypherRtQuery = `
+  MATCH (u:User {id: $id})
+  SET u.rtHash = $rtHash
+  RETURN u
+`;
+    await this.writeSession.run(cypherRtQuery, {
+      id: user.id,
+      rtHash: await bcrypt.hash(tokens.refreshToken, 10),
+    });
+    return tokens;
+  }
 
   async signTokens(id: string, email: string): Promise<Tokens> {
     const accessKey = this.configService.get<string>('JWT_SECRET');
