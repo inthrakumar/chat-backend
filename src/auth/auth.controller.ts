@@ -64,4 +64,23 @@ export class AuthController {
   ): Promise<Tokens> {
     return this.authService.refresh(user.id, user.email, user.refreshToken);
   }
+
+  @Public()
+  @Post('/logout')
+  @UseGuards(RtGuard)
+  async logout(
+    @CurrentUser() user: JwtRTPayload,
+    @Res() res: Response,
+  ): Promise<any> {
+    try {
+      await this.authService.logout(user.id, user.email);
+      return res.status(HttpStatus.OK).json({
+        message: 'Logged out successfully',
+      });
+    } catch (error) {
+      return res.status(400).json({
+        message: 'Failed to logout' + error.message,
+      });
+    }
+  }
 }

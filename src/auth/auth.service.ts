@@ -105,7 +105,35 @@ export class AuthService {
     };
   }
 
-  async logout() {}
+  async logout(id: string, email: string) {
+    console.log('came in ');
+    const cypherQuery = `
+      MATCH (u:User {id: $id, email:$email}) RETURN u
+    `;
+    const result = await this.readSession.run(cypherQuery, { id, email });
+
+    if (!(result.records.length > 0)) {
+      console.log('came in rthash1 ');
+
+      throw new UnauthorizedException('User Not Found.');
+    }
+
+    const user = result.records[0].get('u').properties;
+    console.log(user);
+    console.log(user.rtHash);
+    if (!user || !user.rtHash) {
+      console.log('came in rthash ');
+      throw new UnauthorizedException('Invalid user');
+    }
+
+    const logoutCypherQuery = `
+    MATCH (u:User {id: $id, email: $email}) 
+    SET u.rtHash = null 
+    RETURN u
+`;
+
+    await this.writeSession.run(logoutCypherQuery, { id, email });
+  }
 
   async forgotPassword() {}
 
