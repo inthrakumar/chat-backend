@@ -15,8 +15,8 @@ export type JwtRTPayload = {
 };
 
 export type LoginPayload = JwtPayload & {
-  id: string;
-  email: string;
+  accessToken: string;
+  refreshToken: string;
 };
 export type CassaandraConnectionData = {
   contactPoints: string;

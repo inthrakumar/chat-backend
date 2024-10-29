@@ -12,11 +12,7 @@ import { AuthService } from './auth.service';
 import { AuthDTO } from './auth-dto/auth.dto';
 import { Response } from 'express';
 import { CurrentUser } from '../utilities/decorators/currentuser.decorator';
-import {
-  JwtRTPayload,
-  LoginPayload,
-  Tokens,
-} from 'src/utilities/types/auth.types';
+import { JwtRTPayload, LoginPayload } from 'src/utilities/types/auth.types';
 import { LocalGuard } from '../utilities/guards/local.guard';
 import { Public } from '../utilities/decorators/public.decorator';
 import { RtGuard } from 'src/utilities/guards/rt.guard';
@@ -32,7 +28,13 @@ export class AuthController {
   ) {
     try {
       const userDetail = await this.authService.signUp(userDetails);
-      return res.status(HttpStatus.CREATED).json(userDetail);
+      res.cookie('jwt', userDetail.refreshToken, {
+        httpOnly: true,
+        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+      return res.status(HttpStatus.CREATED).json({
+        accessToken: userDetail.accessToken,
+      });
     } catch (error) {
       if (error instanceof ConflictException) {
         return res.status(HttpStatus.CONFLICT).json({ message: error.message });
@@ -49,9 +51,14 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @CurrentUser() user: LoginPayload,
   ) {
+    const { accessToken, refreshToken } = user;
+    res.cookie('jwt', refreshToken, {
+      httpOnly: true,
+      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
     return res.status(HttpStatus.OK).json({
       message: 'Login successful',
-      user: user,
+      accessToken: accessToken,
     });
   }
 
@@ -61,8 +68,19 @@ export class AuthController {
   async refreshTokens(
     @Res({ passthrough: true }) res: Response,
     @CurrentUser() user: JwtRTPayload,
-  ): Promise<Tokens> {
-    return this.authService.refresh(user.id, user.email, user.refreshToken);
+  ) {
+    const refreshpayload = await this.authService.refresh(
+      user.id,
+      user.email,
+      user.refreshToken,
+    );
+    res.cookie('jwt', refreshpayload.refreshToken, {
+      httpOnly: true,
+      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+    return res.status(HttpStatus.OK).json({
+      accessToken: refreshpayload.accessToken,
+    });
   }
 
   @Public()
@@ -74,6 +92,7 @@ export class AuthController {
   ): Promise<any> {
     try {
       await this.authService.logout(user.id, user.email);
+      res.clearCookie('jwt');
       return res.status(HttpStatus.OK).json({
         message: 'Logged out successfully',
       });
