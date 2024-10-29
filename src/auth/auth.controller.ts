@@ -7,6 +7,7 @@ import {
   Res,
   ConflictException,
   UseGuards,
+  Get,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthDTO } from './auth-dto/auth.dto';
@@ -63,12 +64,13 @@ export class AuthController {
   }
 
   @Public()
-  @Post('/refresh')
+  @Get('/refresh')
   @UseGuards(RtGuard)
   async refreshTokens(
     @Res({ passthrough: true }) res: Response,
     @CurrentUser() user: JwtRTPayload,
   ) {
+    console.log(user);
     const refreshpayload = await this.authService.refresh(
       user.id,
       user.email,

@@ -87,7 +87,7 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials.');
     }
-    const tokens = await this.signTokens(user.email, user.id);
+    const tokens = await this.signTokens(user.id, user.email);
     const cypherQuery = `
   MATCH (u:User {id: $id})
   SET u.rtHash = $rtHash
@@ -139,6 +139,7 @@ export class AuthService {
     email: string,
     refreshToken: string,
   ): Promise<Tokens> {
+    console.log(id, email, refreshToken);
     const cypherQuery = `
       MATCH (u:User {id: $id}) RETURN u
     `;
