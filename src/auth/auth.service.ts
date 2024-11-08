@@ -139,7 +139,6 @@ export class AuthService {
     email: string,
     refreshToken: string,
   ): Promise<Tokens> {
-    console.log(id, email, refreshToken);
     const cypherQuery = `
       MATCH (u:User {id: $id}) RETURN u
     `;

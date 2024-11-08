@@ -25,7 +25,6 @@ export class RefreshTokenStrategy extends PassportStrategy(
   }
 
   validate(req: Request, payload: JwtPayload): JwtRTPayload {
-    console.log(payload);
     const refreshToken = cookieExtractor(req);
     return { refreshToken, ...payload };
   }

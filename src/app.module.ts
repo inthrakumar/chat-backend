@@ -11,6 +11,7 @@ import { UsersModule } from './users/users.module';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { AuthModule } from './auth/auth.module';
+import { ChatGatewayModule } from './chat-gateway/chat-gateway.module';
 
 @Module({
   imports: [
@@ -35,6 +36,8 @@ import { AuthModule } from './auth/auth.module';
     UsersModule,
 
     AuthModule,
+
+    ChatGatewayModule,
   ],
   controllers: [AppController, AuthController],
   providers: [AppService, AuthService],

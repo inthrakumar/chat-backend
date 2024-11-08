@@ -14,6 +14,10 @@ async function initServer() {
   app.enableCors({
     origin: 'http://localhost:5173',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+    exposedHeaders: ['Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 600000,
     preflightContinue: false,
     optionsSuccessStatus: 204,
   });

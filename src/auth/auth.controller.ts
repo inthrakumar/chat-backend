@@ -70,7 +70,6 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
     @CurrentUser() user: JwtRTPayload,
   ) {
-    console.log(user);
     const refreshpayload = await this.authService.refresh(
       user.id,
       user.email,
@@ -80,6 +79,7 @@ export class AuthController {
       httpOnly: true,
       expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
+
     return res.status(HttpStatus.OK).json({
       accessToken: refreshpayload.accessToken,
     });
